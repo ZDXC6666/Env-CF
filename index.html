@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>GitHub 文件管家 · 支持创建文件夹</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            padding: 1.5rem;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .card {
+            max-width: 1300px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .top-bar {
+            background: #0d1117;
+            padding: 1rem 1.8rem;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }
+        .top-bar h2 {
+            font-weight: 600;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .badge-simple {
+            background: #2c974b;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        .content {
+            padding: 1.8rem;
+        }
+        .config-row {
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+            border: 1px solid #e2e8f0;
+        }
+        .field {
+            flex: 1;
+            min-width: 140px;
+        }
+        .field label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #1e293b;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .field input, .field select {
+            width: 100%;
+            padding: 0.6rem 0.9rem;
+            border-radius: 60px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.85rem;
+            outline: none;
+            transition: 0.2s;
+        }
+        .field input:focus {
+            border-color: #1f6feb;
+            box-shadow: 0 0 0 2px rgba(31,111,235,0.2);
+        }
+        button {
+            background: #1f6feb;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 60px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        button.secondary {
+            background: #2d3e5f;
+        }
+        button.outline {
+            background: transparent;
+            border: 1px solid #cbd5e1;
+            color: #1e293b;
+        }
+        button.outline:hover {
+            background: #f1f5f9;
+        }
+        button.success {
+            background: #2da44e;
+        }
+        .upload-card {
+            border: 2px dashed #b9cadc;
+            border-radius: 24px;
+            background: #fefefe;
+            text-align: center;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .upload-card.drag-over {
+            border-color: #1f6feb;
+            background: #f1f9ff;
+        }
+        .file-status {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #2c3e66;
+        }
+        .action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+            margin-bottom: 1.2rem;
+            background: #fefce8;
+            padding: 1rem;
+            border-radius: 20px;
+            border: 1px solid #fde047;
+        }
+        .progress-simple {
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            margin: 12px 0;
+            overflow: hidden;
+        }
+        .progress-simple-fill {
+            width: 0%;
+            height: 100%;
+            background: #1f6feb;
+            transition: width 0.2s;
+        }
+        .log-area {
+            background: #0f172a;
+            color: #cbd5e6;
+            border-radius: 20px;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.75rem;
+            max-height: 160px;
+            overflow-y: auto;
+            margin: 1rem 0;
+        }
+        .log-line {
+            padding: 4px 0;
+            border-bottom: 1px solid #2d3a4a;
+            word-break: break-all;
+        }
+        .files-table-wrapper {
+            overflow-x: auto;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            margin-top: 12px;
+        }
+        .files-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        .files-table th {
+            text-align: left;
+            padding: 12px 12px;
+            background: #f8fafc;
+            font-weight: 600;
+            color: #1e293b;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .files-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f2f5;
+            vertical-align: middle;
+        }
+        .files-table tr:hover {
+            background: #fafcff;
+        }
+        .folder-row {
+            background: #f8fafc;
+            cursor: pointer;
+        }
+        .folder-row:hover {
+            background: #eef2ff;
+        }
+        .folder-icon {
+            color: #e6a700;
+            font-weight: 600;
+        }
+        .file-name-cell {
+            font-weight: 500;
+            word-break: break-all;
+        }
+        .file-size-cell {
+            color: #5c6f87;
+            white-space: nowrap;
+        }
+        .link-cell a {
+            color: #1f6feb;
+            text-decoration: none;
+            font-family: monospace;
+            font-size: 0.7rem;
+            word-break: break-all;
+        }
+        .copy-btn-table {
+            background: #e9edf2;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0 10px 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .note {
+            font-size: 0.7rem;
+            color: #5c6f87;
+            margin-top: 8px;
+        }
+        .empty-row td {
+            padding: 30px;
+            text-align: center;
+            color: #8ba0bc;
+        }
+        .breadcrumb {
+            font-size: 0.8rem;
+            background: #f1f5f9;
+            padding: 6px 12px;
+            border-radius: 40px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .breadcrumb span {
+            cursor: pointer;
+            color: #1f6feb;
+        }
+        @media (max-width: 800px) {
+            .content { padding: 1.2rem; }
+            .files-table th, .files-table td { padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="top-bar">
+        <h2>📁 GitHub 文件管家</h2>
+        <div class="badge-simple">支持创建文件夹 | 上传到 main</div>
+    </div>
+    <div class="content">
+        <!-- 配置区 - 已预填测试信息 -->
+        <div class="config-row">
+            <div class="field">
+                <label>🔑 Token</label>
+                <input type="password" id="token" value="">
+            </div>
+            <div class="field">
+                <label>👤 所有者</label>
+                <input type="text" id="owner" value="ZDXC6666">
+            </div>
+            <div class="field">
+                <label>📁 仓库名</label>
+                <input type="text" id="repo" value="Env-CF">
+            </div>
+            <button id="refreshFilesBtn" class="outline">🔄 刷新文件列表</button>
+        </div>
+
+        <!-- 上传区 -->
+        <div class="upload-card" id="uploadZone">
+            <div>📤 点击 或 拖拽文件至此区域</div>
+            <div class="file-status" id="selectedFileInfo">未选择文件</div>
+            <input type="file" id="hiddenFileInput" style="display:none">
+            <div style="margin-top: 12px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button type="button" id="selectBtn">📂 选择文件</button>
+                <button type="button" id="uploadBtn" class="secondary">🚀 上传到当前文件夹</button>
+            </div>
+        </div>
+
+        <!-- 创建文件夹 + 路径导航 -->
+        <div class="action-row">
+            <div class="field" style="flex:2">
+                <label>📂 新建文件夹名称</label>
+                <input type="text" id="newFolderName" placeholder="例如: images 或 docs">
+            </div>
+            <button id="createFolderBtn" class="success">📁 创建文件夹</button>
+            <div class="field" style="flex:2">
+                <label>🔽 当前路径 (点击可跳转)</label>
+                <div class="breadcrumb" id="currentPathDisplay">/ (根目录)</div>
+                <input type="hidden" id="currentDir" value="">
+            </div>
+        </div>
+
+        <!-- 进度条 -->
+        <div id="progressArea" style="display: none;">
+            <div class="progress-simple"><div class="progress-simple-fill" id="uploadFill"></div></div>
+            <div id="progressText" style="font-size:0.75rem;">准备中...</div>
+        </div>
+
+        <!-- 日志 -->
+        <div class="log-area" id="logArea">
+            <div class="log-line">✅ 就绪 | 已预填测试仓库 ZDXC6666/Env-CF，支持创建文件夹和上传文件到任意目录</div>
+        </div>
+
+        <!-- 文件表格 -->
+        <div class="flex-between">
+            <strong>📋 当前目录文件列表 (main分支)</strong>
+            <div>
+                <button id="clearLocalListBtn" class="outline" style="padding:4px 12px;">🗑️ 清空本地记录</button>
+            </div>
+        </div>
+        <div class="files-table-wrapper">
+            <table class="files-table" id="filesTable">
+                <thead>
+                    <tr><th>名称</th><th>类型</th><th>大小</th><th>直链/操作</th></tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr class="empty-row"><td colspan="4">点击「刷新文件列表」加载仓库内容</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="note">✨ 支持文件夹：点击文件夹名称可进入；创建文件夹后刷新即可看到。上传文件会保存到当前所在目录。</div>
+    </div>
+</div>
+
+<script>
+    // DOM 元素
+    const tokenInput = document.getElementById('token');
+    const ownerInput = document.getElementById('owner');
+    const repoInput = document.getElementById('repo');
+    const uploadZone = document.getElementById('uploadZone');
+    const hiddenFileInput = document.getElementById('hiddenFileInput');
+    const selectBtn = document.getElementById('selectBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const refreshFilesBtn = document.getElementById('refreshFilesBtn');
+    const clearLocalListBtn = document.getElementById('clearLocalListBtn');
+    const logArea = document.getElementById('logArea');
+    const tableBody = document.getElementById('tableBody');
+    const progressArea = document.getElementById('progressArea');
+    const progressFill = document.getElementById('uploadFill');
+    const progressText = document.getElementById('progressText');
+    const selectedFileInfo = document.getElementById('selectedFileInfo');
+    const newFolderNameInput = document.getElementById('newFolderName');
+    const createFolderBtn = document.getElementById('createFolderBtn');
+    const currentDirInput = document.getElementById('currentDir');
+    const currentPathDisplay = document.getElementById('currentPathDisplay');
+
+    // 当前目录路径 (相对于仓库根目录)
+    let currentDir = '';
+    // 当前目录下的文件/文件夹列表
+    let currentItems = [];
+
+    // 更新路径显示
+    function updatePathDisplay() {
+        if (!currentDir) {
+            currentPathDisplay.innerHTML = '<span onclick="navigateToRoot()">📁 / (根目录)</span>';
+        } else {
+            const parts = currentDir.split('/').filter(p => p);
+            let pathHtml = '<span onclick="navigateToRoot()">根目录</span>';
+            let cumulative = '';
+            parts.forEach((part, idx) => {
+                cumulative += (idx === 0 ? part : '/' + part);
+                pathHtml += ` / <span onclick="navigateToPath('${cumulative}')">${escapeHtml(part)}</span>`;
+            });
+            currentPathDisplay.innerHTML = pathHtml;
+        }
+    }
+
+    // 导航到根目录
+    window.navigateToRoot = function() {
+        currentDir = '';
+        currentDirInput.value = '';
+        updatePathDisplay();
+        fetchRepoContents();
+        addLog(`📂 切换到根目录`);
+    };
+    // 导航到指定路径
+    window.navigateToPath = function(path) {
+        currentDir = path;
+        currentDirInput.value = path;
+        updatePathDisplay();
+        fetchRepoContents();
+        addLog(`📂 切换到目录: ${path || '根目录'}`);
+    };
+
+    function addLog(msg, isErr = false) {
+        const logLine = document.createElement('div');
+        logLine.className = 'log-line';
+        logLine.style.color = isErr ? '#f9a8a8' : '#a5f0c0';
+        const time = new Date().toLocaleTimeString();
+        logLine.textContent = `[${time}] ${msg}`;
+        logArea.appendChild(logLine);
+        logLine.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // 限制日志条数
+        while (logArea.children.length > 80) logArea.removeChild(logArea.firstChild);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    function formatFileSize(bytes) {
+        if (!bytes && bytes !== 0) return '-';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function getConfig() {
+        const token = tokenInput.value.trim();
+        const owner = ownerInput.value.trim();
+        const repo = repoInput.value.trim();
+        if (!token || !owner || !repo) {
+            throw new Error('请填写完整配置');
+        }
+        return { token, owner, repo };
+    }
+
+    // 获取仓库内容 (当前目录)
+    async function fetchRepoContents() {
+        try {
+            const { token, owner, repo } = getConfig();
+            let url = `https://api.github.com/repos/${owner}/${repo}/contents/${currentDir ? encodeURIComponent(currentDir) : ''}?ref=main`;
+            addLog(`🔍 获取目录: ${currentDir || '/'}`);
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+            });
+            if (!response.ok) {
+                if (response.status === 404) {
+                    addLog(`⚠️ 目录不存在: ${currentDir || '/'}，已回到根目录`, true);
+                    currentDir = '';
+                    currentDirInput.value = '';
+                    updatePathDisplay();
+                    return fetchRepoContents();
+                }
+                throw new Error(`获取失败 ${response.status}`);
+            }
+            const items = await response.json();
+            currentItems = Array.isArray(items) ? items : [];
+            renderFileTable();
+            addLog(`✅ 加载 ${currentItems.length} 个项目`);
+        } catch (err) {
+            addLog(`❌ 加载目录失败: ${err.message}`, true);
+            currentItems = [];
+            renderFileTable();
+        }
+    }
+
+    // 渲染表格 (支持文件夹和文件)
+    function renderFileTable() {
+        if (!tableBody) return;
+        if (!currentItems.length) {
+            tableBody.innerHTML = '<tr class="empty-row"><td colspan="4">📭 此目录为空，可上传文件或创建文件夹</td></tr>';
+            return;
+        }
+        tableBody.innerHTML = '';
+        // 先显示文件夹，再显示文件
+        const folders = currentItems.filter(item => item.type === 'dir');
+        const files = currentItems.filter(item => item.type === 'file');
+        [...folders, ...files].forEach(item => {
+            const row = document.createElement('tr');
+            if (item.type === 'dir') row.classList.add('folder-row');
+            const isFolder = (item.type === 'dir');
+            const name = item.name;
+            const size = isFolder ? 0 : (item.size || 0);
+            const downloadUrl = isFolder ? '' : (item.download_url || `https://raw.githubusercontent.com/${ownerInput.value.trim()}/${repoInput.value.trim()}/main/${currentDir ? currentDir+'/' : ''}${encodeURIComponent(name)}`);
+            
+            row.innerHTML = `
+                <td class="file-name-cell">
+                    ${isFolder ? '<span class="folder-icon">📁</span> ' : '📄 '}
+                    <span style="${isFolder ? 'cursor:pointer;color:#1f6feb;font-weight:500;' : ''}" class="item-name" data-name="${escapeHtml(name)}" data-is-dir="${isFolder}">${escapeHtml(name)}</span>
+                </td>
+                <td>${isFolder ? '文件夹' : '文件'}</td>
+                <td class="file-size-cell">${isFolder ? '—' : formatFileSize(size)}</td>
+                <td>${isFolder ? '<button class="copy-btn-table" disabled style="opacity:0.5;">进入</button>' : `<button class="copy-btn-table copy-link-btn" data-url="${escapeHtml(downloadUrl)}">📋 复制直链</button> <a href="${escapeHtml(downloadUrl)}" target="_blank" style="margin-left:6px;">🔗 预览</a>`}</td>
+            `;
+            tableBody.appendChild(row);
+            
+            // 文件夹点击进入
+            if (isFolder) {
+                const nameSpan = row.querySelector('.item-name');
+                nameSpan.addEventListener('click', () => {
+                    const newPath = currentDir ? `${currentDir}/${name}` : name;
+                    currentDir = newPath;
+                    currentDirInput.value = currentDir;
+                    updatePathDisplay();
+                    fetchRepoContents();
+                    addLog(`📂 进入文件夹: ${name}`);
+                });
+            } else {
+                const copyBtn = row.querySelector('.copy-link-btn');
+                if (copyBtn) {
+                    copyBtn.addEventListener('click', async (e) => {
+                        const url = copyBtn.getAttribute('data-url');
+                        try {
+                            await navigator.clipboard.writeText(url);
+                            addLog(`✅ 复制直链: ${url.substring(0, 60)}...`);
+                            copyBtn.textContent = '✓ 已复制';
+                            setTimeout(() => { copyBtn.textContent = '📋 复制直链'; }, 1500);
+                        } catch (err) { addLog(`复制失败`, true); }
+                    });
+                }
+            }
+        });
+    }
+
+    // 创建文件夹: 通过上传一个 .gitkeep 文件实现
+    async function createFolder(folderName) {
+        if (!folderName.trim()) {
+            addLog('⚠️ 请输入文件夹名称', true);
+            return;
+        }
+        const folderPath = currentDir ? `${currentDir}/${folderName}` : folderName;
+        // 检查是否已存在
+        const existing = currentItems.find(i => i.name === folderName && i.type === 'dir');
+        if (existing) {
+            addLog(`⚠️ 文件夹 "${folderName}" 已存在`, true);
+            return;
+        }
+        try {
+            const { token, owner, repo } = getConfig();
+            addLog(`📁 创建文件夹: ${folderPath}/`);
+            // 在文件夹内创建 .gitkeep 文件
+            const fileUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(folderPath)}/.gitkeep`;
+            const contentBase64 = btoa("# 占位文件，用于保留空文件夹");
+            const body = {
+                message: `创建文件夹 ${folderPath}`,
+                content: contentBase64,
+                branch: 'main'
+            };
+            const response = await fetch(fileUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) {
+                const err = await response.text();
+                throw new Error(`创建失败 ${response.status}: ${err.substring(0, 100)}`);
+            }
+            addLog(`✅ 文件夹 "${folderName}" 创建成功！刷新列表查看`);
+            await fetchRepoContents();
+            newFolderNameInput.value = '';
+        } catch (err) {
+            addLog(`❌ 创建文件夹失败: ${err.message}`, true);
+        }
+    }
+
+    // 上传文件到当前目录
+    async function uploadFileToCurrentDir(file) {
+        if (!file) {
+            addLog('⚠️ 请先选择文件', true);
+            return;
+        }
+        let { token, owner, repo } = getConfig();
+        const filePath = currentDir ? `${currentDir}/${file.name}` : file.name;
+        const commitMsg = `上传 ${file.name} 到 ${currentDir || '根目录'}`;
+        
+        addLog(`🚀 上传: ${file.name} → ${filePath}`);
+        showProgress(10, '读取文件...');
+        
+        // 读取文件为 base64
+        const reader = new FileReader();
+        return new Promise((resolve, reject) => {
+            reader.onload = async function() {
+                const base64Content = reader.result.split(',')[1];
+                // 检查文件是否已存在，获取sha
+                let sha = null;
+                try {
+                    const checkUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(filePath)}`;
+                    const checkRes = await fetch(checkUrl, { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (checkRes.ok) {
+                        const data = await checkRes.json();
+                        sha = data.sha;
+                        addLog(`⚠️ 文件已存在，将覆盖更新`);
+                    }
+                } catch(e) {}
+                
+                const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(filePath)}`;
+                const body = {
+                    message: commitMsg,
+                    content: base64Content,
+                    branch: 'main'
+                };
+                if (sha) body.sha = sha;
+                
+                let interval = setInterval(() => {
+                    let cur = parseFloat(progressFill.style.width) || 10;
+                    if (cur < 80) {
+                        let nxt = cur + Math.random() * 12;
+                        progressFill.style.width = `${Math.min(80, nxt)}%`;
+                        progressText.innerText = `上传中 ${Math.floor(Math.min(80, nxt))}%`;
+                    }
+                }, 300);
+                
+                try {
+                    const response = await fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/vnd.github+json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(body)
+                    });
+                    clearInterval(interval);
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        throw new Error(`上传失败 ${response.status}: ${errText.substring(0, 150)}`);
+                    }
+                    const result = await response.json();
+                    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${encodeURIComponent(filePath)}`;
+                    showProgress(100, '完成!');
+                    addLog(`🎉 上传成功: ${file.name} → ${rawUrl}`);
+                    // 刷新当前目录列表
+                    await fetchRepoContents();
+                    setTimeout(() => hideProgress(), 1500);
+                    resolve(rawUrl);
+                } catch (err) {
+                    clearInterval(interval);
+                    hideProgress();
+                    addLog(`❌ 上传失败: ${err.message}`, true);
+                    reject(err);
+                }
+            };
+            reader.onerror = () => {
+                hideProgress();
+                reject(new Error('读取文件失败'));
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function showProgress(percent, status) {
+        progressArea.style.display = 'block';
+        progressFill.style.width = `${percent}%`;
+        progressText.innerText = status || `${Math.floor(percent)}%`;
+    }
+    function hideProgress() {
+        progressArea.style.display = 'none';
+        progressFill.style.width = '0%';
+    }
+
+    // 选择文件逻辑
+    let currentFile = null;
+    function setSelectedFile(file) {
+        if (!file) return;
+        currentFile = file;
+        selectedFileInfo.innerHTML = `📎 已选: ${file.name} (${(file.size/1024).toFixed(2)} KB)  → 将上传到 ${currentDir || '根目录'}`;
+        addLog(`📁 选择文件: ${file.name}`);
+    }
+
+    selectBtn.addEventListener('click', () => hiddenFileInput.click());
+    hiddenFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) setSelectedFile(e.target.files[0]);
+    });
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length) setSelectedFile(e.dataTransfer.files[0]);
+    });
+    uploadZone.addEventListener('click', (e) => {
+        if (e.target === uploadZone || e.target.closest('.upload-card') && !e.target.closest('button')) hiddenFileInput.click();
+    });
+    
+    uploadBtn.addEventListener('click', async () => {
+        if (currentFile) {
+            await uploadFileToCurrentDir(currentFile);
+            currentFile = null;
+            selectedFileInfo.innerHTML = '未选择文件 (上传完成，可继续选择)';
+        } else {
+            addLog('⚠️ 请先选择文件', true);
+        }
+    });
+    
+    refreshFilesBtn.addEventListener('click', () => fetchRepoContents());
+    clearLocalListBtn.addEventListener('click', () => {
+        addLog(`🗑️ 已清空日志 (页面记录刷新)`);
+        // 仅清日志区域
+        logArea.innerHTML = '<div class="log-line">✨ 日志已清空</div>';
+    });
+    
+    createFolderBtn.addEventListener('click', () => {
+        const folderName = newFolderNameInput.value.trim();
+        if (folderName) createFolder(folderName);
+        else addLog('请输入文件夹名称', true);
+    });
+    
+    // 初始化加载
+    updatePathDisplay();
+    fetchRepoContents();
+    addLog(`🔐 已预填测试仓库: ZDXC6666/Env-CF | 支持创建文件夹、上传、浏览`);
+</script>
+</body>
+</html>
